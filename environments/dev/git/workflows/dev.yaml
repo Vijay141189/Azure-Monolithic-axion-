@@ -49,7 +49,7 @@ jobs:
 
   terraform:
     name: "Terraform Plan & Apply"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-lat
     
     # We want it to run on push to main (without PR), or on PR after the scan finishes successfully.
     # To handle both simply, we won't strictly enforce 'needs: security-scan' on push, 
