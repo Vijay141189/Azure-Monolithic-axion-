@@ -1,36 +1,77 @@
-# This is a basic workflow to help you get started with Actions
+```yaml
+name: Terraform Dev Pipeline
 
-name: CI
-
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
-    branches: [ "main" ]
+    branches:
+      - main
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+env:
+  TF_WORKING_DIR: environments/dev
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
+
+  terraform:
+    name: Terraform CI/CD
     runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
+    # 1. Checkout Code
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
-        run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+    # 2. Setup Terraform
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: "1.9.8"
+
+    # 3. Setup TFLint
+    - name: Setup TFLint
+      uses: terraform-linters/setup-tflint@v4
+      with:
+        tflint_version: v0.50.3
+
+    # 4. Initialize TFLint
+    - name: Initialize TFLint
+      working-directory: ${{ env.TF_WORKING_DIR }}
+      run: tflint --init
+
+    # 5. Run TFLint
+    - name: Run TFLint
+      working-directory: ${{ env.TF_WORKING_DIR }}
+      run: tflint -f compact
+
+    # 6. Run TFSec
+    - name: Run TFSec
+      uses: aquasecurity/tfsec-action@v1.0.3
+      with:
+        working_directory: ${{ env.TF_WORKING_DIR }}
+        soft_fail: true
+
+    # 7. Terraform Init
+    - name: Terraform Init
+      working-directory: ${{ env.TF_WORKING_DIR }}
+      run: terraform init
+
+    # 8. Terraform Validate
+    - name: Terraform Validate
+      working-directory: ${{ env.TF_WORKING_DIR }}
+      run: terraform validate
+
+    # 9. Terraform Plan
+    - name: Terraform Plan
+      if: github.event_name == 'pull_request'
+      working-directory: ${{ env.TF_WORKING_DIR }}
+      run: terraform plan -no-color
+
+    # 10. Terraform Apply
+    - name: Terraform Apply
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      working-directory: ${{ env.TF_WORKING_DIR }}
+      run: terraform
+```
